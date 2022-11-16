@@ -1,36 +1,55 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: Test action
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
 jobs:
-  Explore-GitHub-Actions:
+  main:
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - content_type: text/markdown
+            attachments: action.yml
+            body: file://README.md
+          - content_type: text/html
+            attachments: package.json,package-lock.json
+            body: |
+              <!DOCTYPE html>
+              <html>
+              <body>
+              <h1>Heading</h1>
+              <p>Paragraph</p>
+              </body>
+              </html>
+          - content_type: text/html
+            convert_markdown: true
+            body: |
+              # h1
+              ## h2
+              ### h3
+              **bold**
+              _italics_
+              - bullet 1
+              - bullet 2
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
-- name: Send mail
-if: always()
-uses: dawidd6/action-send-mail@v2
-with:
-    # mail server settings
-    server_address: smtp.gmail.com
-    server_port: 465
-    # user credentials
-    username: ${{ secrets.EMAIL_USERNAME }}
-    password: ${{ secrets.EMAIL_PASSWORD }}
-    # email subject
-    subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
-    # email body as text
-    body: ${{ github.job }} job in worflow ${{ github.workflow }} of ${{ github.repository }} has ${{ job.status }}
-    # comma-separated string, send email to
-    to: johndoe@gmail.com,doejohn@gmail.com
-    # from email name
-    from: John Doe
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Send mail
+        uses: ./
+        with:
+          server_address: ${{secrets.ADDRESS}}
+          server_port: 465
+          username: ${{secrets.USERNAME}}
+          password: ${{secrets.PASSWORD}}
+          subject: ${{github.repository}}
+          body: ${{matrix.body}}
+          to: ${{github.event.pusher.email}}
+          from: github-actions
+          content_type: ${{matrix.content_type}}
+          convert_markdown: ${{matrix.convert_markdown}}
+          attachments: ${{matrix.attachments}}
